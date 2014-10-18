@@ -1,5 +1,5 @@
 /*
- * svglayout.js 0.8.0 Alpha - JavaScript SVGLayout Tools Library
+ * svglayout.js 0.8.2 Alpha - JavaScript SVGLayout Tools Library
  *
  * Copyright (c) 2014 Thomas DeMeo 
  * Copyright (c) 2014 Waltham Software Corp. All rights reserved.
@@ -150,7 +150,7 @@ function SVGLayout() {
                         overObj.select(false);
                     }
                 }
-                else {http://raphaeljs.com/reference.html#Element.id
+                else {
                     if (sl.altKeyDown(lastEvent) === false)  {
                         sl.selectNone();
                     }
@@ -412,15 +412,14 @@ function SVGLayout() {
 
     };
 
-    sl.importJSON = function (jsonText) {
-        var i, impArray, newDiv;
-        if(jsonText.length > 0) {
-            impArray = JSON.parse(jsonText);
-            for (i = 0; i < impArray.length; i++) {
-                impArray[i].newDiv = new sl.Div(impArray[i].divID);
+    sl.importJSON = function (jsonData) {
+        var i, newDiv;
+        if(jsonData.length > 0) {
+            for (i = 0; i < jsonData.length; i++) {
+                jsonData[i].newDiv = new sl.Div(jsonData[i].divID);
             }
-            for (i = 0; i < impArray.length; i++) {
-                impArray[i].newDiv.setParameters(impArray[i], false);
+            for (i = 0; i < jsonData.length; i++) {
+                jsonData[i].newDiv.setParameters(jsonData[i], false);
             }
             sl.getThreshold();
             sl.resizeLayout();
@@ -428,13 +427,66 @@ function SVGLayout() {
     };
 
     sl.exportJSON = function () {
-        var i, expArray, expObj;
+        var i, expArray, expObj, selectedOnly;
         expArray = [];
+        selectedOnly = false;
         for (i = 0; i < sl.DivObj.length; i++) {
-            expObj = sl.DivObj[i].exportData();
-            expArray.push(expObj);
+            if (sl.DivObj[i].isSelected) {
+                selectedOnly = true;
+                break;
+            }
         }
-        return (JSON.stringify(expArray));
+        for (i = 0; i < sl.DivObj.length; i++) {
+            if (selectedOnly)  {
+                if (sl.DivObj[i].isSelected) {
+                    expObj = sl.DivObj[i].exportData();
+                    expArray.push(expObj);
+                }
+            }
+            else {
+                expObj = sl.DivObj[i].exportData();
+                expArray.push(expObj);
+            }
+        }
+        return (JSON.stringify(expArray,null,4));
+    };
+
+    sl.exportLayout = function () {
+        var jsonText;
+        jsonText = sl.exportJSON();
+        //The export is contained in the var jsonText
+        //You can replace the following function  with a mechanism to save the data directly to your server
+        jsonText = "svglJSON = " + jsonText + ";";
+        $("<div id='svgl_exp_div'/>").appendTo("body");
+        $("#svgl_exp_div").css({
+            "position": "absolute",
+            "display": "inline",
+            "top": "50%",
+            "left": "50%",
+            "margin-top": "-40px",
+            "margin-left": "-200px",
+            "margin-right": "-40px",
+            "margin-bottom": "-200px",
+            "font-family": "Arial",
+            "font-size": "12px",
+            "background-color": "#AFC8D7",
+            "border": "4px solid #99AFBC"
+        });
+        $("<form id='svgl_exp_form' name='svglExp'/>").appendTo("#svgl_exp_div");
+        $("<span id='svgl_exp_lbl'/>").appendTo("#svgl_exp_form");
+        $("#svgl_exp_lbl").css({
+            "font-weight": "bold",
+            "padding-bottom": "40px"
+        });
+        $("<br/>").appendTo("#svgl_exp_form");
+        $("#svgl_exp_lbl" ).text(" Exported JSON: ");
+        $("<textarea id='svgl_exp_text' rows='4' cols='54' />").appendTo("#svgl_exp_form");
+        $("#svgl_exp_text").val(jsonText);
+        $("#svgl_exp_text").focus();
+        $("#svgl_exp_text").select();
+        $("#svgl_exp_text" ).blur(function() {
+            $('#svgl_exp_div').remove();
+        });
     };
 
     sl.selectAll = function () {
@@ -712,7 +764,15 @@ function SVGLayout() {
             this.div.width(this.cc.w);
         }
         else {
-            this.div.width("auto");
+            if(this.div.is(":visible")) {
+                this.div.width("auto");
+            }
+            else {
+                this.div.show();
+                this.div.width("auto");
+                this.div.hide();
+            }
+
             if (this.div.width() === 0) {
                 this.div.width(sl.defaultWidth);
             }
@@ -721,22 +781,30 @@ function SVGLayout() {
             this.div.height(this.cc.h);
         }
         else {
-            this.div.height("auto");
+            if(this.div.is(":visible")) {
+                this.div.height("auto");
+            }
+            else {
+                this.div.show();
+                this.div.height("auto");
+                this.div.hide();
+            }
             if (this.div.height() === 0) {
                 this.div.height(sl.defaultHeight);
             }
         }
 
         this.div.css("z-index", this.zIndex);
-
-        if(this.display) {
-            this.div.show();
+       
+        if(this.div.is(":visible")) {
+            offset = this.div.offset();
         }
         else {
-           this.div.hide();
+            this.div.show();
+            offset = this.div.offset();
+            this.div.hide();
         }
-       
-        offset = this.div.offset();
+
         this.cc.x = offset.left;
         this.cc.y = offset.top;
         this.cc.w = this.div.width();
@@ -777,11 +845,6 @@ function SVGLayout() {
         this.badgeText.attr("fill", "white");
         this.rHandle.attr("fill", sl.selectedLineColor);
         this.rHandle.attr("stroke-width", 0);
-        
-        if (sl.isZIBadgeOn === false) {
-            this.badgeRect.hide();
-            this.badgeText.hide();
-        }
 
         overlay.rel.toFront();
 
@@ -928,6 +991,12 @@ function SVGLayout() {
         if (typeof paramObj.vAuto === 'boolean') {
             this.vAuto = paramObj.vAuto;
         }
+        if (typeof paramObj.modURL === 'string') {
+            this.modURL = paramObj.modURL;
+        }
+        if (typeof paramObj.modSel === 'string') {
+            this.modSel = paramObj.modSel;
+        }
 
         //<Defaults
         if(typeof this.zIndex !== 'number') {
@@ -935,7 +1004,7 @@ function SVGLayout() {
         }
 
         if(typeof this.display !== 'boolean') {
-            this.display = true;
+            this.display = false;
         }
 
         if(typeof this.pc.x !== "number") {
@@ -1009,6 +1078,12 @@ function SVGLayout() {
         if(typeof this.vAuto !== 'boolean') {
             this.vAuto = false; //default
         }
+        if(typeof this.modURL !== 'string') {
+            this.modURL = ""; //default
+        }
+        if(typeof this.modSel !== 'string') {
+            this.modSel = ""; //default
+        }
         //Defaults>
 
         if (resize) {
@@ -1058,7 +1133,6 @@ function SVGLayout() {
         expObj.cc = this.cc;
         expObj.pc = this.pc;
         expObj.zIndex = this.zIndex;
-        expObj.display = this.display;
         expObj.hAction = this.hAction;
         expObj.hMin = this.hMin;
         expObj.hMax = this.hMax;
@@ -1069,6 +1143,8 @@ function SVGLayout() {
         expObj.vMax = this.vMax;
         expObj.vRate = this.vRate;
         expObj.vAuto = this.vAuto;
+        expObj.modURL = this.modURL;
+        expObj.modSel = this.modSel;
         return expObj;
    };
 
@@ -1324,6 +1400,15 @@ $(window).on("resize", function() {
         svglLayoutList[i].resizeLayout();
     }
 });
+
+$( window ).on( "orientationchange", function( event ) {
+      var i;
+    for (i = 0; i < svglLayoutList.length; (i++)) {
+        svglLayoutList[i].getThreshold();
+        svglLayoutList[i].resizeLayout();
+    }
+});
+
 
 
 
