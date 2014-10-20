@@ -112,13 +112,9 @@ function SVGLayout() {
         }
     });
 
-    overlay.rel.node.onkeydown = function(e) {
+    $(document).click(function(e) {
         lastEvent = e;
-    };
-
-    overlay.rel.node.onkeyup = function(e) {
-        lastEvent = e;
-    };
+    });
 
     //Tests if initial click is over an element
     overAnElement = function (x, y, selectOn) {
@@ -300,6 +296,7 @@ function SVGLayout() {
         if (!e) {
             e = window.event;
         }
+
         if (e.altKey ) {
             return true;
         }
