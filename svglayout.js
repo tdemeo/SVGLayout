@@ -1398,13 +1398,18 @@ $(window).on("resize", function() {
     }
 });
 
-$( window ).on( "orientationchange", function( event ) {
-      var i;
+$(window).on( "orientationchange", function( event ) {
+    this.scrollTo(0, 0);
+    var i;
     for (i = 0; i < svglLayoutList.length; (i++)) {
         svglLayoutList[i].getThreshold();
         svglLayoutList[i].resizeLayout();
     }
 });
+
+
+
+
 
 
 
