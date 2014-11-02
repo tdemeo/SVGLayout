@@ -60,8 +60,10 @@ function SVGLayout() {
     svglWindow.getCoordinates = function () {
         var co;
         co = {};
-        co.x = $(document).scrollTop();
-        co.y = $(document).scrollLeft();
+        //co.x = $(document).scrollTop();
+        //co.y = $(document).scrollLeft();
+        co.x = 0;
+        co.y = 0;
         co.w = $(window).width();
         co.h = $(window).height();
         return co;
@@ -1391,6 +1393,7 @@ function svglDelete(svgl) {
 }
 
 $(window).on("resize", function() {
+    this.scrollTo(0, 0);
     var i;
     for (i = 0; i < svglLayoutList.length; (i++)) {
         svglLayoutList[i].getThreshold();
